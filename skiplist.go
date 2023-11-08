@@ -99,9 +99,6 @@ func (s *SkipList) Set(key string, value []byte) {
 	}
 
 	curr = curr.Forward[0]
-	if curr != nil {
-		fmt.Println(compare(curr.Data, data))
-	}
 
 	if curr == nil || compare(curr.Data, data) != 0 {
 		rLevel := s.randomLevel()
