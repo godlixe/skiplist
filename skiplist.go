@@ -132,7 +132,7 @@ func (s *SkipList) Set(key string, value []byte) {
 }
 
 // Search data from the list.
-func (s *SkipList) Search(key string) ([]byte, error) {
+func (s *SkipList) Search(key string) (*Data, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -151,7 +151,7 @@ func (s *SkipList) Search(key string) ([]byte, error) {
 	curr = curr.Forward[0]
 
 	if curr != nil && compare(&curr.Data, &data) == 0 {
-		return curr.Data.Value, nil
+		return &curr.Data, nil
 	}
 
 	return nil, ErrKeyNotFound
