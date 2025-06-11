@@ -1,6 +1,7 @@
 package skiplist
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -43,7 +44,7 @@ func TestCompare(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
-			got := compare(tc.a, tc.b)
+			got := compare(&tc.a, &tc.b)
 			assert.Equal(t, tc.want, got)
 		})
 	}
@@ -54,7 +55,7 @@ func TestList(t *testing.T) {
 	// create new list
 	list := New(10)
 
-	// insert ("1", []byte("hello"))
+	// insert("1", []byte("hello"))
 	list.Set("1", []byte("1"))
 	res, _ := list.Search("1")
 	assert.Equal(t, []byte("1"), res)
@@ -65,11 +66,26 @@ func TestList(t *testing.T) {
 	list.Set("3", []byte("3"))
 	list.Set("4", []byte("4"))
 
+	assert.Equal(t, 4, list.Len())
+
+	// test delete
+	list.Delete("2")
+
+	_, err := list.Search("2")
+	fmt.Println(err)
+
+	assert.EqualError(t, err, ErrKeyNotFound.Error())
+
 	list.Print()
+
+	for _, v := range list.Sorted() {
+		fmt.Println(v.Key, " ", v.Value)
+	}
 
 	list.Set("1", []byte("0"))
 	res, _ = list.Search("1")
 	assert.Equal(t, []byte("0"), res)
 
 	list.Print()
+
 }

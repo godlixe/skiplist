@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
+	"sync"
 )
 
 // Global maximum level of skip list.
 const MaxLevel int = 30
+
+var ErrKeyNotFound = errors.New("key not found")
 
 // Defines the data that will be stored in the list.
 type Data struct {
@@ -20,17 +23,14 @@ type Data struct {
 // 1 if data a is larger than b,
 // 0 if data a is the same as b,
 // -1 if data a is smaller than b.
-func compare(a Data, b Data) int {
+func compare(a, b *Data) int {
 	return strings.Compare(a.Key, b.Key)
-}
-
-// Defines the levels in the skip list
-type Level struct {
-	Next *Node
 }
 
 // Defines the skip list
 type SkipList struct {
+	mu sync.RWMutex
+
 	// Max possible level for this skip list.
 	MaxLevel int
 
@@ -70,6 +70,11 @@ func New(maxLevel int) SkipList {
 	}
 }
 
+// Creates a new skip list with the default max level of 30
+func NewDefault() SkipList {
+	return New(MaxLevel)
+}
+
 // Generates a random integer ranging from 0 to the max level of the skip list.
 func (s *SkipList) randomLevel() int {
 	return rand.Intn(s.MaxLevel)
@@ -78,6 +83,9 @@ func (s *SkipList) randomLevel() int {
 // Inserts data to the list if key does not exist already.
 // If the key already exists, the value will be updated with the new one.
 func (s *SkipList) Set(key string, value []byte) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	data := Data{
 		Key:   key,
 		Value: value,
@@ -87,11 +95,11 @@ func (s *SkipList) Set(key string, value []byte) {
 	update := make([]*Node, s.MaxLevel+1)
 
 	for i := s.Level; i >= 0; i-- {
-		for curr.Forward[i] != nil && compare(curr.Forward[i].Data, data) == -1 {
+		for curr.Forward[i] != nil && compare(&curr.Forward[i].Data, &data) == -1 {
 			curr = curr.Forward[i]
 		}
 
-		if curr.Forward[i] != nil && compare(curr.Forward[i].Data, data) == 0 {
+		if curr.Forward[i] != nil && compare(&curr.Forward[i].Data, &data) == 0 {
 			curr.Forward[i].Data = data
 		}
 
@@ -100,7 +108,7 @@ func (s *SkipList) Set(key string, value []byte) {
 
 	curr = curr.Forward[0]
 
-	if curr == nil || compare(curr.Data, data) != 0 {
+	if curr == nil || compare(&curr.Data, &data) != 0 {
 		rLevel := s.randomLevel()
 
 		if rLevel > s.Level {
@@ -125,6 +133,8 @@ func (s *SkipList) Set(key string, value []byte) {
 
 // Search data from the list.
 func (s *SkipList) Search(key string) ([]byte, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	data := Data{
 		Key: key,
@@ -133,23 +143,25 @@ func (s *SkipList) Search(key string) ([]byte, error) {
 	curr := s.Header
 
 	for i := s.Level; i >= 0; i-- {
-		for curr.Forward[i] != nil && compare(curr.Forward[i].Data, data) == -1 {
+		for curr.Forward[i] != nil && compare(&curr.Forward[i].Data, &data) == -1 {
 			curr = curr.Forward[i]
 		}
 	}
 
 	curr = curr.Forward[0]
 
-	if curr != nil && compare(curr.Data, data) == 0 {
+	if curr != nil && compare(&curr.Data, &data) == 0 {
 		return curr.Data.Value, nil
 	}
 
-	return nil, errors.New("data not found")
+	return nil, ErrKeyNotFound
 }
 
 // Deletes a data from the list with specified data.
 // The data is compared using the compare() function.
 func (s *SkipList) Delete(key string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	data := Data{
 		Key: key,
@@ -160,7 +172,7 @@ func (s *SkipList) Delete(key string) {
 	update := make([]*Node, s.MaxLevel+1)
 
 	for i := s.Level; i >= 0; i-- {
-		for curr.Forward[i] != nil && compare(curr.Forward[i].Data, data) == -1 {
+		for curr.Forward[i] != nil && compare(&curr.Forward[i].Data, &data) == -1 {
 			curr = curr.Forward[i]
 		}
 		update[i] = curr
@@ -168,7 +180,7 @@ func (s *SkipList) Delete(key string) {
 
 	curr = curr.Forward[0]
 
-	if curr != nil && compare(curr.Data, data) == 0 {
+	if curr != nil && compare(&curr.Data, &data) == 0 {
 		for i := 0; i <= s.Level; i++ {
 			if update[i].Forward[i] != curr {
 				break
@@ -181,19 +193,42 @@ func (s *SkipList) Delete(key string) {
 			s.Level--
 		}
 	}
-
 }
 
 // Prints all the elements at the bottom level of the list.
 func (s *SkipList) Print() {
-	for i := 0; i < s.Level; i++ {
-		node := s.Header.Forward[i]
-		for node != nil {
-			fmt.Print(node.Data.Key, " ", node.Data.Value)
-			fmt.Print(" ")
-			node = node.Forward[i]
-		}
-
+	for _, v := range s.Sorted() {
+		fmt.Print(v, " ")
 	}
-	fmt.Println()
+	fmt.Println("")
+}
+
+// Returns a slice containing all the elements of the skiplist in sorted order.
+func (s *SkipList) Sorted() []Data {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	var res []Data
+
+	node := s.Header.Forward[0]
+	for node != nil {
+		res = append(res, node.Data)
+		node = node.Forward[0]
+	}
+
+	return res
+}
+
+func (s *SkipList) Len() int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	var len int
+	node := s.Header.Forward[0]
+	for node != nil {
+		len++
+		node = node.Forward[0]
+	}
+
+	return len
 }
