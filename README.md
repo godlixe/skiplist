@@ -28,29 +28,82 @@ import (
 	"github.com/godlixe/skiplist"
 )
 
+// Data type for the skiplist's data
+type Data struct {
+	Key   string
+	Value []byte
+}
+
+// A comparator function to sort the data
+func cmpData(a, b Data) int {
+	if a.Key == b.Key {
+		return 0
+	} else if a.Key < b.Key {
+		return -1
+	}
+
+	return 1
+}
+
 func main() {
-	// creates a new skiplist with max level of 10
-	list := skiplist.New(10)
+	// creates a new skiplist with max level of 10 and
+	// comparator function cmpData
+	list := skiplist.New(10, cmpData)
 
 	// sets the key "a" to store the byte array value of "hi"
-	list.Set("a", []byte("hi"))
+	list.Set(Data{
+		Key:   "a",
+		Value: []byte("hi"),
+	})
 
 	// search the list for the key "a"
-	res, err := list.Search("a")
+	res, err := list.Search(Data{
+		Key: "a",
+	})
 
 	// prints the result
-	fmt.Println(string(res), err)
+	fmt.Println(res, err)
 
 	// update the key "a" to store the byte array value of "hello"
-	list.Set("a", []byte("hello"))
+	list.Set(Data{
+		Key:   "a",
+		Value: []byte("hello"),
+	})
 
-	res, err = list.Search("a")
-	fmt.Println(string(res), err)
+	res, err = list.Search(Data{
+		Key: "a",
+	})
+
+	fmt.Println(res, err)
 
 	// delete key "a" from the list
-	list.Delete("a")
+	list.Delete(Data{
+		Key: "a",
+	})
 
-	res, err = list.Search("a")
-	fmt.Println(string(res), err)
+	// searching for a non-existing target will return
+	// the error ErrTargetNotFound
+	res, err = list.Search(Data{
+		Key: "a",
+	})
+	fmt.Println(res, err)
+
+	list.Set(Data{
+		Key:   "b",
+		Value: []byte("2"),
+	})
+
+	list.Set(Data{
+		Key:   "c",
+		Value: []byte("3"),
+	})
+
+	// Prints the length of the list
+	fmt.Println(list.Len())
+
+	// Iterate the list
+	for i := list.Iterate(); i.Valid(); i.Next() {
+		fmt.Printf("key : %s, value : %s\n", i.Data().Key, i.Data().Value)
+	}
 }
 ```
