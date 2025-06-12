@@ -58,7 +58,7 @@ func TestList(t *testing.T) {
 	// insert("1", []byte("hello"))
 	list.Set("1", []byte("1"))
 	res, _ := list.Search("1")
-	assert.Equal(t, []byte("1"), res)
+	assert.Equal(t, []byte("1"), res.Value)
 
 	// insert ("1", []byte("hello"))
 
@@ -84,8 +84,32 @@ func TestList(t *testing.T) {
 
 	list.Set("1", []byte("0"))
 	res, _ = list.Search("1")
-	assert.Equal(t, []byte("0"), res)
+	assert.Equal(t, []byte("0"), res.Value)
 
 	list.Print()
 
+}
+
+func TestIterator(t *testing.T) {
+	list := NewDefault()
+
+	list.Set("a", []byte{1})
+	list.Set("b", []byte{2})
+	list.Set("c", []byte{3})
+
+	it := list.Iterate()
+
+	assert.Equal(t, it.Data().Key, "a")
+	assert.Equal(t, it.Data().Value, []byte{1})
+
+	it.Next()
+
+	assert.Equal(t, it.Data().Key, "b")
+	assert.Equal(t, it.Data().Value, []byte{2})
+
+	it.Next()
+
+	it.Next()
+
+	assert.Equal(t, it.Valid(), false)
 }

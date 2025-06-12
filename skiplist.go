@@ -13,6 +13,21 @@ const MaxLevel int = 30
 
 var ErrKeyNotFound = errors.New("key not found")
 
+// Used to iterate the skiplist elements
+// in a sorted order.
+type Iterator struct {
+	current *Node
+}
+
+type NewData[T any] interface {
+
+	// Compares two data keys in a sorting context. Returns
+	// 1 if data a is larger than b,
+	// 0 if data a is the same as b,
+	// -1 if data a is smaller than b.
+	Compare(a, b *T) bool
+}
+
 // Defines the data that will be stored in the list.
 type Data struct {
 	Key   string
@@ -231,4 +246,24 @@ func (s *SkipList) Len() int {
 	}
 
 	return len
+}
+
+func (s *SkipList) Iterate() *Iterator {
+	return &Iterator{
+		current: s.Header.Forward[0],
+	}
+}
+
+func (i *Iterator) Valid() bool {
+	return i.current != nil
+}
+
+func (i *Iterator) Next() {
+	if i.Valid() {
+		i.current = i.current.Forward[0]
+	}
+}
+
+func (i *Iterator) Data() Data {
+	return i.current.Data
 }
