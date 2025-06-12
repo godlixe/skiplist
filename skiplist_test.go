@@ -7,6 +7,21 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type Data struct {
+	Key   string
+	Value []byte
+}
+
+func cmpData(a, b Data) int {
+	if a.Key == b.Key {
+		return 0
+	} else if a.Key < b.Key {
+		return -1
+	}
+
+	return 1
+}
+
 func TestCompare(t *testing.T) {
 	type test struct {
 		description string
@@ -44,7 +59,7 @@ func TestCompare(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
-			got := compare(&tc.a, &tc.b)
+			got := cmpData(tc.a, tc.b)
 			assert.Equal(t, tc.want, got)
 		})
 	}
@@ -53,28 +68,30 @@ func TestCompare(t *testing.T) {
 
 func TestList(t *testing.T) {
 	// create new list
-	list := New(10)
+	list := New(10, cmpData)
 
 	// insert("1", []byte("hello"))
-	list.Set("1", []byte("1"))
-	res, _ := list.Search("1")
+	list.Set(Data{
+		Key:   "1",
+		Value: []byte("1"),
+	})
+	res, _ := list.Search(Data{Key: "1"})
 	assert.Equal(t, []byte("1"), res.Value)
 
 	// insert ("1", []byte("hello"))
 
-	list.Set("2", []byte("2"))
-	list.Set("3", []byte("3"))
-	list.Set("4", []byte("4"))
+	list.Set(Data{Key: "2", Value: []byte{2}})
+	list.Set(Data{Key: "3", Value: []byte{3}})
+	list.Set(Data{Key: "4", Value: []byte{4}})
 
 	assert.Equal(t, 4, list.Len())
 
 	// test delete
-	list.Delete("2")
+	list.Delete(Data{Key: "2"})
 
-	_, err := list.Search("2")
-	fmt.Println(err)
+	_, err := list.Search(Data{Key: "2"})
 
-	assert.EqualError(t, err, ErrKeyNotFound.Error())
+	assert.EqualError(t, err, ErrTargetNotFound.Error())
 
 	list.Print()
 
@@ -82,20 +99,21 @@ func TestList(t *testing.T) {
 		fmt.Println(v.Key, " ", v.Value)
 	}
 
-	list.Set("1", []byte("0"))
-	res, _ = list.Search("1")
-	assert.Equal(t, []byte("0"), res.Value)
+	list.Set(Data{Key: "1", Value: []byte{0}})
+	res, _ = list.Search(Data{Key: "1"})
+
+	assert.Equal(t, []byte{0}, res.Value)
 
 	list.Print()
 
 }
 
 func TestIterator(t *testing.T) {
-	list := NewDefault()
+	list := NewDefault(cmpData)
 
-	list.Set("a", []byte{1})
-	list.Set("b", []byte{2})
-	list.Set("c", []byte{3})
+	list.Set(Data{Key: "a", Value: []byte{1}})
+	list.Set(Data{Key: "b", Value: []byte{2}})
+	list.Set(Data{Key: "c", Value: []byte{3}})
 
 	it := list.Iterate()
 
