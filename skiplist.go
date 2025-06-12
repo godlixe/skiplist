@@ -54,6 +54,7 @@ type Node[T any] struct {
 // Creates a new skip list.
 func New[T any](maxLevel int, cmp Comparator[T]) SkipList[T] {
 	var zero T
+
 	// Create new node with dummy data as header.
 	node := &Node[T]{
 		Data:    zero,
